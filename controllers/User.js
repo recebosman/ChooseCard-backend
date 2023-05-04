@@ -1,6 +1,6 @@
 const User = require("../models/User");
-const bcrypt = require("bcrypt");
-
+const jwt = require("jsonwebtoken");
+const CryptoJS = require("crypto-js");
 const express = require("express");
 const router = express.Router();
 
@@ -9,8 +9,14 @@ const router = express.Router();
 router.post("/register", async (req, res) => {
   const { email, password } = req.body;
   try {
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const alreadyExists = await User.findOne({ email });
+    if (alreadyExists) {
+      return res.status(401).send("Email already exists");
+    }
+    const hashedPassword = CryptoJS.AES.encrypt(
+      password,
+      process.env.SECRET_KEY
+    ).toString();
     const newUser = new User({
       email,
       password: hashedPassword,
@@ -27,25 +33,29 @@ router.post("/register", async (req, res) => {
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
   try {
-    const user = await User.findOne({ email });
-    !user && res.status(404).send("User not found");
+    const userFound = await User.findOne({ email });
+    !userFound && res.status(401).send("User not found");
 
-    const validPassword = await bcrypt.compare(password, user.password);
-    !validPassword && res.status(400).send("Wrong password");
+    console.log(userFound);
 
-    res.status(200).json(user);
-  } catch (error) {
-    console.log(error);
-  }
-});
+    const bytes = CryptoJS.AES.decrypt(
+      userFound.password,
+      process.env.SECRET_KEY
+    );
+    const decryptedPassword = bytes.toString(CryptoJS.enc.Utf8);
+    if (decryptedPassword !== password) {
+      return res.status(401).send("Invalid Password");
+    }
 
-// get user
-
-router.get("/find/:id", async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
-    const { password, ...others } = user._doc;
-    res.status(200).json(others);
+    if (decryptedPassword) {
+      const accessToken = jwt.sign(
+        { id: userFound._id, isAdmin: userFound.isAdmin },
+        process.env.SECRET_KEY,
+        { expiresIn: "5d" }
+      );
+      const { password, ...others } = userFound._doc;
+      res.status(200).json({ ...others, accessToken });
+    }
   } catch (error) {
     console.log(error);
   }

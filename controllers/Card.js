@@ -1,11 +1,11 @@
 const express = require("express");
 const router = express.Router();
-
+const { isAdmin } = require("../Middleware/Verify");
 const Card = require("../models/Card");
 const User = require("../models/User");
 
 // CREATE
-router.post("/:userId", async (req, res) => {
+router.post("/:userId", isAdmin, async (req, res) => {
   try {
     const { id, name, position, number, userId } = req.body;
     if (!id || !name || !position || !number) {
@@ -28,7 +28,7 @@ router.post("/:userId", async (req, res) => {
 });
 
 // READ ALL
-router.get("/:userId", async (req, res) => {
+router.get("/:userId", isAdmin, async (req, res) => {
   try {
     const user = await User.findById(req.params.id).populate("Cards");
     if (!user) {
@@ -41,7 +41,7 @@ router.get("/:userId", async (req, res) => {
 });
 
 // UPDATE
-router.put("/:userId/cards/:cardId", async (req, res) => {
+router.put("/:userId/cards/:cardId", isAdmin, async (req, res) => {
   try {
     const { id, name, position, number } = req.body;
     if (!id || !name || !position || !number) {
@@ -74,7 +74,7 @@ router.put("/:userId/cards/:cardId", async (req, res) => {
 });
 
 // DELETE
-router.delete("/:userId/cards/:cardId", async (req, res) => {
+router.delete("/:userId/cards/:cardId", isAdmin, async (req, res) => {
   try {
     const user = await User.findById(req.params.userId);
     if (!user) {
