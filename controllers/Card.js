@@ -1,18 +1,18 @@
 const express = require("express");
 const router = express.Router();
-const { isAdmin } = require("../Middleware/Verify");
+// const { isAdmin } = require("../Middleware/Verify");
 const Card = require("../models/Card");
 const User = require("../models/User");
 
 // CREATE
-router.post("/:userId", isAdmin, async (req, res) => {
+router.post("/:userId", async (req, res) => {
   try {
-    const { id, name, position, number, userId } = req.body;
+    const { id, name, position, number, icon, userId } = req.body;
     if (!id || !name || !position || !number) {
       return res.status(400).json({ msg: "Please include all fields" });
     }
 
-    const newCard = await Card.create({ id, name, position, number });
+    const newCard = await Card.create({ id, name, position, number, icon });
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ msg: "User not found" });
@@ -28,9 +28,10 @@ router.post("/:userId", isAdmin, async (req, res) => {
 });
 
 // READ ALL
-router.get("/:userId", isAdmin, async (req, res) => {
+router.get("/:userId", async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).populate("Cards");
+    const userId = req.params.userId;
+    const user = await User.findById(userId).populate("Cards");
     if (!user) {
       return res.status(404).json({ msg: "User not found" });
     }
@@ -41,10 +42,10 @@ router.get("/:userId", isAdmin, async (req, res) => {
 });
 
 // UPDATE
-router.put("/:userId/cards/:cardId", isAdmin, async (req, res) => {
+router.put("/:userId/cards/:cardId", async (req, res) => {
   try {
-    const { id, name, position, number } = req.body;
-    if (!id || !name || !position || !number) {
+    const { number } = req.body;
+    if (!name) {
       return res.status(400).json({ msg: "Please include all fields" });
     }
 
@@ -74,7 +75,7 @@ router.put("/:userId/cards/:cardId", isAdmin, async (req, res) => {
 });
 
 // DELETE
-router.delete("/:userId/cards/:cardId", isAdmin, async (req, res) => {
+router.delete("/:userId/cards/:cardId", async (req, res) => {
   try {
     const user = await User.findById(req.params.userId);
     if (!user) {
